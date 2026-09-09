@@ -30,6 +30,22 @@ jobs:
         run: |
           sed -i 's#file:///android_asset/index.html#https://bright-kringle-c65c5d.netlify.app#' app/src/main/java/com/mutrading/customer/MainActivity.java
 
+      - name: Fix Android WebView screen layout
+        working-directory: ${{ steps.project.outputs.dir }}
+        run: |
+          python3 - <<'PY'
+          p="app/src/main/java/com/mutrading/customer/MainActivity.java"
+          s=open(p).read()
+          s=s.replace(
+              'webView.getSettings().setDomStorageEnabled(true);',
+              'webView.getSettings().setDomStorageEnabled(true);\n'
+              '        webView.getSettings().setLoadWithOverviewMode(true);\n'
+              '        webView.getSettings().setUseWideViewPort(false);\n'
+              '        webView.setFitsSystemWindows(true);'
+          )
+          open(p,"w").write(s)
+          PY
+
       - name: Set up JDK
         uses: actions/setup-java@v5
         with:
@@ -48,5 +64,5 @@ jobs:
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: MU-Trading-APK-FIXED
+          name: MU-Trading-APK-BANNER-FIXED
           path: ${{ steps.project.outputs.dir }}/app/build/outputs/apk/debug/app-debug.apk
