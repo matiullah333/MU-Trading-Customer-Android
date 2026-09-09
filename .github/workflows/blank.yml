@@ -18,14 +18,17 @@ jobs:
         run: |
           mkdir android-project
           unzip -q MU_Trading_Customer_Android_Project.zip -d android-project
-          find android-project -type f -name settings.gradle -exec dirname {} \;
 
       - name: Find project directory
         id: project
         run: |
           PROJECT_DIR=$(dirname "$(find android-project -name settings.gradle -type f | head -1)")
           echo "dir=$PROJECT_DIR" >> "$GITHUB_OUTPUT"
-          echo "Android project: $PROJECT_DIR"
+
+      - name: Connect app to live Customer Shop
+        working-directory: ${{ steps.project.outputs.dir }}
+        run: |
+          sed -i 's#file:///android_asset/index.html#https://bright-kringle-c65c5d.netlify.app#' app/src/main/java/com/mutrading/customer/MainActivity.java
 
       - name: Set up JDK
         uses: actions/setup-java@v5
@@ -45,5 +48,5 @@ jobs:
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: MU-Trading-APK
+          name: MU-Trading-APK-FIXED
           path: ${{ steps.project.outputs.dir }}/app/build/outputs/apk/debug/app-debug.apk
