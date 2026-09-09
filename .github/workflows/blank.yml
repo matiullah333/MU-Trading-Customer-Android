@@ -30,115 +30,28 @@ jobs:
         run: |
           sed -i 's#file:///android_asset/index.html#https://bright-kringle-c65c5d.netlify.app#' app/src/main/java/com/mutrading/customer/MainActivity.java
 
-      - name: Fix Android status bar overlap
+      - name: Fix Android WebView safely
         working-directory: ${{ steps.project.outputs.dir }}
         run: |
-          cat > app/src/main/java/com/mutrading/customer/MainActivity.java <<'JAVA'
-          package com.mutrading.customer;
+          python3 - <<'PY'
+          p="app/src/main/java/com/mutrading/customer/MainActivity.java"
+          s=open(p).read()
 
-          import android.app.Activity;
-          import android.os.Bundle;
-          import android.graphics.Color;
-          import android.view.View;
-          import android.view.Window;
-          import android.view.WindowInsets;
-          import android.view.WindowInsetsController;
-          import android.webkit.WebSettings;
-          import android.webkit.WebView;
-          import android.webkit.WebViewClient;
-          import android.widget.FrameLayout;
+          s=s.replace(
+              'webView.getSettings().setDomStorageEnabled(true);',
+              'webView.getSettings().setDomStorageEnabled(true);\n'
+              '        webView.getSettings().setLoadWithOverviewMode(false);\n'
+              '        webView.getSettings().setUseWideViewPort(false);'
+          )
 
-          public class MainActivity extends Activity {
+          s=s.replace(
+              'setContentView(webView);',
+              'webView.setFitsSystemWindows(true);\n'
+              '        setContentView(webView);'
+          )
 
-              private WebView webView;
-
-              @Override
-              protected void onCreate(Bundle savedInstanceState) {
-                  super.onCreate(savedInstanceState);
-
-                  Window window = getWindow();
-
-                  window.setStatusBarColor(Color.rgb(7, 11, 20));
-                  window.setNavigationBarColor(Color.rgb(7, 11, 20));
-
-                  if (android.os.Build.VERSION.SDK_INT >= 30) {
-                      WindowInsetsController controller = window.getInsetsController();
-                      if (controller != null) {
-                          controller.setSystemBarsAppearance(
-                              0,
-                              WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS
-                          );
-                      }
-                  }
-
-                  webView = new WebView(this);
-
-                  FrameLayout root = new FrameLayout(this);
-                  root.setFitsSystemWindows(true);
-
-                  FrameLayout.LayoutParams params =
-                      new FrameLayout.LayoutParams(
-                          FrameLayout.LayoutParams.MATCH_PARENT,
-                          FrameLayout.LayoutParams.MATCH_PARENT
-                      );
-
-                  root.addView(webView, params);
-                  setContentView(root);
-
-                  webView.setFitsSystemWindows(true);
-
-                  WebSettings settings = webView.getSettings();
-                  settings.setJavaScriptEnabled(true);
-                  settings.setDomStorageEnabled(true);
-                  settings.setDatabaseEnabled(true);
-                  settings.setLoadWithOverviewMode(false);
-                  settings.setUseWideViewPort(false);
-                  settings.setBuiltInZoomControls(false);
-                  settings.setDisplayZoomControls(false);
-
-                  webView.setVerticalScrollBarEnabled(false);
-                  webView.setHorizontalScrollBarEnabled(false);
-                  webView.setWebViewClient(new WebViewClient());
-
-                  webView.loadUrl(
-                      "https://bright-kringle-c65c5d.netlify.app"
-                  );
-              }
-
-              @Override
-              public void onWindowFocusChanged(boolean hasFocus) {
-                  super.onWindowFocusChanged(hasFocus);
-
-                  if (hasFocus && android.os.Build.VERSION.SDK_INT >= 30) {
-                      getWindow().getDecorView().setOnApplyWindowInsetsListener(
-                          (view, insets) -> {
-                              WindowInsets.Type.systemBars();
-                              view.setPadding(
-                                  0,
-                                  insets.getInsets(
-                                      WindowInsets.Type.statusBars()
-                                  ).top,
-                                  0,
-                                  0
-                              );
-                              return insets;
-                          }
-                      );
-
-                      getWindow().getDecorView().requestApplyInsets();
-                  }
-              }
-
-              @Override
-              public void onBackPressed() {
-                  if (webView != null && webView.canGoBack()) {
-                      webView.goBack();
-                  } else {
-                      super.onBackPressed();
-                  }
-              }
-          }
-          JAVA
+          open(p,"w").write(s)
+          PY
 
       - name: Set up JDK
         uses: actions/setup-java@v5
@@ -158,5 +71,5 @@ jobs:
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: MU-Trading-APK-STATUSBAR-FIXED
+          name: MU-Trading-APK-STABLE
           path: ${{ steps.project.outputs.dir }}/app/build/outputs/apk/debug/app-debug.apk
