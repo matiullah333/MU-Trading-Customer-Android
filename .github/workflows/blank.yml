@@ -25,12 +25,7 @@ jobs:
           PROJECT_DIR=$(dirname "$(find android-project -name settings.gradle -type f | head -1)")
           echo "dir=$PROJECT_DIR" >> "$GITHUB_OUTPUT"
 
-      - name: Connect app to live Customer Shop
-        working-directory: ${{ steps.project.outputs.dir }}
-        run: |
-          sed -i 's#file:///android_asset/index.html#https://bright-kringle-c65c5d.netlify.app#' app/src/main/java/com/mutrading/customer/MainActivity.java
-
-      - name: Fix Android WebView safely
+      - name: Make app fullscreen
         working-directory: ${{ steps.project.outputs.dir }}
         run: |
           python3 - <<'PY'
@@ -38,20 +33,31 @@ jobs:
           s=open(p).read()
 
           s=s.replace(
-              'webView.getSettings().setDomStorageEnabled(true);',
-              'webView.getSettings().setDomStorageEnabled(true);\n'
-              '        webView.getSettings().setLoadWithOverviewMode(false);\n'
-              '        webView.getSettings().setUseWideViewPort(false);'
-          )
+              'super.onCreate(savedInstanceState);',
+              '''super.onCreate(savedInstanceState);
 
-          s=s.replace(
-              'setContentView(webView);',
-              'webView.setFitsSystemWindows(true);\n'
-              '        setContentView(webView);'
+                  getWindow().setFlags(
+                      android.view.WindowManager.LayoutParams.FLAG_FULLSCREEN,
+                      android.view.WindowManager.LayoutParams.FLAG_FULLSCREEN
+                  );
+
+                  getWindow().getDecorView().setSystemUiVisibility(
+                      android.view.View.SYSTEM_UI_FLAG_FULLSCREEN |
+                      android.view.View.SYSTEM_UI_FLAG_HIDE_NAVIGATION |
+                      android.view.View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY |
+                      android.view.View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN |
+                      android.view.View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION |
+                      android.view.View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+                  );'''
           )
 
           open(p,"w").write(s)
           PY
+
+      - name: Connect app to live Customer Shop
+        working-directory: ${{ steps.project.outputs.dir }}
+        run: |
+          sed -i 's#file:///android_asset/index.html#https://bright-kringle-c65c5d.netlify.app#' app/src/main/java/com/mutrading/customer/MainActivity.java
 
       - name: Set up JDK
         uses: actions/setup-java@v5
@@ -71,5 +77,5 @@ jobs:
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: MU-Trading-APK-STABLE
+          name: MU-Trading-APK-FULLSCREEN
           path: ${{ steps.project.outputs.dir }}/app/build/outputs/apk/debug/app-debug.apk
